@@ -1,12 +1,12 @@
 
 
-# duoluoluo
+# dororo
 
 
 
 ## 简单介绍
 
-* duoluoluo是一款WEB自动化任务的工具。
+* dororo是一款WEB自动化任务的工具。
 
 
 ## FAQ
