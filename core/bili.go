@@ -1,8 +1,11 @@
 package core
 
 import (
+	"Dororo/utils"
+	"encoding/json"
 	"fmt"
 	"github.com/go-rod/rod"
+	"math/rand"
 	"time"
 )
 
@@ -45,18 +48,7 @@ func (b *BiliHandle) Play()  {
 	childPage := b.B.MustPage(fmt.Sprintf("http:%s" , *v))
 	childPage.MustElement("#bilibiliPlayer").MustClick()
 
-	for {
-		videoStart := childPage.MustElement("bilibili-player-video-time-now").MustText()
-		videoTime := childPage.MustElement(".bilibili-player-video-time-total").MustText()
-
-		fmt.Print(videoStart)
-		fmt.Print(videoTime)
-
-		if(videoStart == videoTime) {
-			break
-		}
-		time.Sleep(time.Second )
-	}
+	childPage.MustElement(".bilibili-player-upinfo-span.restart")
 
 	fmt.Print("vide play ending")
 	childPage.Close()
@@ -75,20 +67,62 @@ func (b *BiliHandle) Like() {
 	
 }
 
+type Dynamic struct {
+	Time string `json:"time"`
+	Content string `json:"content"`
+}
 // 老大哥在看你
 
-func (b *BiliHandle)BigBrotherIsWatchingYou()  {
+func (b *BiliHandle)BigBrotherIsWatchingYou(id string)  {
 
-	scpage := b.B.MustPage("https://space.bilibili.com/20076571/dynamic")
-	scpage.MustElement(".card")
+	var  dynamicArr []Dynamic
+	var dynamicArrItme Dynamic
 
-	arr  := scpage.MustElements(".card")
+	scpage := b.B.MustPage(fmt.Sprintf("https://space.bilibili.com/%s/dynamic" ,id))
+	for {
+
+		scpage.Reload()
+		dynamicArr = nil
+		scpage.MustElement(".main-content")
+
+		arr  := scpage.MustElements(".main-content")
 
 
-	for k , v := range  arr {
-		fmt.Println(k)
-		fmt.Println(v.MustText())
-		fmt.Println("-----------------------------------")
+		for _ , v := range  arr {
+
+			dyTime := v.MustElement(".detail-link.tc-slate").MustText()
+			content := v.MustElement(".card-content").MustText()
+
+			dynamicItem := Dynamic{
+				Time:    dyTime,
+				Content: content,
+			}
+
+			dynamicArr = append(dynamicArr , dynamicItem)
+
+		}
+		//程序第一次运行
+		if(dynamicArrItme.Time == "" ){
+
+			dynamicArrItme = dynamicArr[0]
+
+			utils.WxSendMsg(string(`老大哥已经开始看着他啦 ， 最后一条动态更新为` + dynamicArrItme.Time))
+			fmt.Println("fir")
+
+		}
+
+
+		if dynamicArrItme.Time != dynamicArr[0].Time  || dynamicArrItme.Content != dynamicArr[0].Content {
+			fmt.Println("更新")
+			utils.WxSendMsg(fmt.Sprintf("老大哥发现Ta的动态已经更新啦 ！！！ 时间为 ： %s , 内容为 : %s "  , dynamicArr[0].Time ,dynamicArr[0].Content))
+			dynamicArrItme = dynamicArr[0]
+		}
+
+		rand.Seed(time.Now().UnixNano())
+
+
+		time.Sleep(time.Second * 3 )
+
 	}
 }
 
@@ -128,6 +162,58 @@ func (b *BiliHandle) GetFocus()  {
 	fmt.Println(rs)
 	fmt.Printf( "一共关注人数为 %d" , len(rs))
 }
+
+//我的直播关注列表
+
+func (b *BiliHandle) GetLiveFocus (){
+
+	type LiveItme struct {
+		Name string `json:"name"`
+		Status string `json:"status"`
+	}
+
+	var rsString string
+
+	cpage := b.B.MustPage("https://link.bilibili.com/p/center/index#/user-center/follow/1")
+
+	for{
+		var liveArr []LiveItme
+		cpage.Reload()
+		cpage.MustElement(".favourite-card")
+		arr := cpage.MustElements(".favourite-card")
+
+		for _ , v := range arr {
+			liveArr = append(liveArr , LiveItme{
+				Name:   v.MustElement(".anchor-name").MustText(),
+				Status: v.MustElement(".anchor-status").MustText(),
+			})
+		}
+		rsByte , err  := json.Marshal(liveArr)
+		if err != nil {
+			fmt.Println(err)
+		}
+		if rsString == "" {
+
+			rsString = string(rsByte)
+			utils.WxSendMsg(string(`直播列表正在监听` + rsString))
+			fmt.Println("fir")
+
+		}
+
+		if rsString != string(rsString) {
+			rsString = string(rsByte)
+			utils.WxSendMsg(string(`直播列表已经更新` + rsString))
+		}
+
+		rand.Seed(time.Now().UnixNano())
+
+		r := rand.Intn(5) + 5
+		fmt.Println(r)
+		time.Sleep(time.Minute * time.Duration(r))
+	}
+
+}
+
 
 //直播项目签到
 

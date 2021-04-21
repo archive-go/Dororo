@@ -7,7 +7,9 @@ import (
 func Start()  {
 
 	b := NewBiHandle()
-	b.BigBrotherIsWatchingYou()
+	b.GetLiveFocus()
+
+	//b.BigBrotherIsWatchingYou("20076571")
 
 	time.Sleep(time.Second * 60 * 60)
 }

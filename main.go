@@ -1,7 +1,10 @@
 package main
 
-import "Dororo/core"
+import (
+	"Dororo/core"
+)
 
 func main()  {
+
 	core.Start()
 }
